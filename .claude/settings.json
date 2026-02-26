@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php --version)",
+      "Bash(composer --version)",
+      "Bash(node --version)",
+      "Bash(composer create-project laravel/laravel . --prefer-dist)",
+      "Read(//Users/fabriziobottacchiari/ProgettiSoftware/**)",
+      "Bash(bash -c 'shopt -s dotglob && mv /Users/fabriziobottacchiari/ProgettiSoftware/gallery-temp/* /Users/fabriziobottacchiari/ProgettiSoftware/gallery.vinileroma/ && rmdir /Users/fabriziobottacchiari/ProgettiSoftware/gallery-temp && echo \"\"Done\"\"')",
+      "Bash(composer require spatie/laravel-medialibrary intervention/image:^3.0)",
+      "Bash(composer require laravel/breeze --dev)",
+      "Bash(php artisan breeze:install blade --no-interaction)",
+      "Bash(php artisan vendor:publish --provider=\"Spatie\\\\MediaLibrary\\\\MediaLibraryServiceProvider\" --tag=\"medialibrary-migrations\")",
+      "Bash(php artisan migrate)",
+      "Bash(php artisan app:check-storage)",
+      "Bash(php artisan route:list --compact)",
+      "Bash(php artisan route:list)",
+      "Bash(composer require league/flysystem-aws-s3-v3 --with-all-dependencies)",
+      "Bash(php artisan vendor:publish --provider=\"Spatie\\\\MediaLibrary\\\\MediaLibraryServiceProvider\" --tag=\"medialibrary-config\")",
+      "Bash(php artisan route:list --path=evento)",
+      "Bash(php artisan route:list --name=public)"
+    ],
+    "additionalDirectories": [
+      "/Users/fabriziobottacchiari/.claude/projects/-Users-fabriziobottacchiari-ProgettiSoftware-gallery-vinileroma"
+    ]
+  }
+}
