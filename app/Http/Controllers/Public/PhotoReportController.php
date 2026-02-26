@@ -16,8 +16,13 @@ use Illuminate\Support\Facades\Mail;
 
 class PhotoReportController extends Controller
 {
-    public function store(Request $request, Event $event, PhotoUpload $photoUpload): JsonResponse
+    public function store(Request $request, string $year, string $month, string $slug, PhotoUpload $photoUpload): JsonResponse
     {
+        $event = Event::where('slug', $slug)
+            ->whereYear('event_date', $year)
+            ->whereMonth('event_date', $month)
+            ->firstOrFail();
+
         abort_if($photoUpload->event_id !== $event->id, 404);
         abort_if($photoUpload->status !== 'completed', 404);
 

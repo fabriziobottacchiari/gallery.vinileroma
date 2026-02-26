@@ -18,7 +18,22 @@
       "Bash(composer require league/flysystem-aws-s3-v3 --with-all-dependencies)",
       "Bash(php artisan vendor:publish --provider=\"Spatie\\\\MediaLibrary\\\\MediaLibraryServiceProvider\" --tag=\"medialibrary-config\")",
       "Bash(php artisan route:list --path=evento)",
-      "Bash(php artisan route:list --name=public)"
+      "Bash(php artisan route:list --name=public)",
+      "Bash(php artisan route:list --path=admin)",
+      "Bash(find /Users/fabriziobottacchiari/ProgettiSoftware/gallery.vinileroma -path \"*/vendor\" -prune -o -name \"*.php\" -type f -exec grep -l \"DB::raw\\\\|whereRaw\\\\|selectRaw\" {} ;)",
+      "Bash(php artisan config:clear)",
+      "Bash(php artisan route:list --name=mfa)",
+      "Bash(php -l app/Http/Middleware/SecurityHeaders.php)",
+      "Bash(php -l app/Services/SystemSettingsService.php)",
+      "Bash(php -l app/Http/Controllers/Admin/MfaController.php)",
+      "Bash(php -l app/Http/Controllers/Public/EventController.php)",
+      "Bash(php artisan cache:clear)",
+      "Bash(php artisan tinker --execute=\"echo config\\(''mail.mailer''\\) . '' | from: '' . config\\(''mail.from.address''\\) . '' | host: '' . config\\(''mail.mailers.smtp.host''\\);\")",
+      "Bash(php artisan tinker --execute=\"echo config\\(''mail.default''\\);\")",
+      "Bash(php artisan tinker --execute=\":*)",
+      "Bash(php artisan view:clear)",
+      "Bash(php artisan media-library:move-to-other-disk public)",
+      "Bash(php artisan media-library:regenerate)"
     ],
     "additionalDirectories": [
       "/Users/fabriziobottacchiari/.claude/projects/-Users-fabriziobottacchiari-ProgettiSoftware-gallery-vinileroma"

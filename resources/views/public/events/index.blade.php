@@ -2,6 +2,13 @@
 
 @section('title', 'Archivio eventi — ' . config('app.name'))
 
+@push('head')
+    <meta property="og:type"        content="website">
+    <meta property="og:title"       content="Archivio eventi — {{ config('app.name') }}">
+    <meta property="og:description" content="Galleria fotografica ufficiale delle serate.">
+    <meta property="og:url"         content="{{ url('/') }}">
+@endpush
+
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
 
@@ -17,13 +24,13 @@
     @else
         <div class="columns-2 sm:columns-3 lg:columns-4 gap-3">
             @foreach($events as $event)
-                @php $cover = $event->getFirstMedia('gallery'); @endphp
+                @php $coverThumb = $coverUrls[$event->id] ?? null; @endphp
                 <div class="break-inside-avoid mb-3">
-                    <a href="{{ route('public.events.show', $event) }}"
+                    <a href="{{ route('public.events.show', $event->publicRouteParams()) }}"
                        class="group relative block overflow-hidden rounded-xl bg-zinc-800">
 
-                        @if($cover)
-                            <img src="{{ $cover->getUrl('thumb') }}"
+                        @if($coverThumb)
+                            <img src="{{ $coverThumb }}"
                                  alt="{{ $event->title }}"
                                  loading="lazy"
                                  class="w-full object-cover transition duration-500 group-hover:scale-105 group-hover:brightness-110">

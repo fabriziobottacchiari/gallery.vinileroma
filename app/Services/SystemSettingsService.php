@@ -6,6 +6,8 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 class SystemSettingsService
 {
@@ -14,7 +16,18 @@ class SystemSettingsService
     private const CACHE_TTL = 3600; // 1 hour
 
     /**
-     * Retrieve a single setting value by key.
+     * Keys whose values are stored encrypted at rest.
+     * These are cloud storage credentials that must never appear in DB backups as plaintext.
+     */
+    private const ENCRYPTED_KEYS = [
+        's3_secret',
+        'do_secret',
+        's3_key',
+        'do_key',
+    ];
+
+    /**
+     * Retrieve a single setting value by key (decrypted if necessary).
      */
     public function get(string $key, mixed $default = null): mixed
     {
@@ -22,25 +35,51 @@ class SystemSettingsService
     }
 
     /**
-     * Retrieve all settings as a key-value array, with caching.
+     * Retrieve all settings as a key-value array.
+     * Encrypted values are decrypted transparently.
      *
      * @return array<string, string|null>
      */
     public function all(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
+        $raw = Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
             return Setting::all()->pluck('value', 'key')->all();
         });
+
+        $result = [];
+        foreach ($raw as $key => $value) {
+            if ($value !== null && in_array($key, self::ENCRYPTED_KEYS, true)) {
+                try {
+                    $result[$key] = Crypt::decryptString($value);
+                } catch (DecryptException) {
+                    // Value was stored before encryption was added — return as-is
+                    // On next save, it will be re-encrypted automatically
+                    $result[$key] = $value;
+                }
+            } else {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 
     /**
-     * Persist a setting value and invalidate the cache.
+     * Persist a setting value (encrypted if it's a sensitive key) and invalidate the cache.
      */
     public function set(string $key, mixed $value): void
     {
+        $stored = $value;
+
+        if ($value !== null && in_array($key, self::ENCRYPTED_KEYS, true)) {
+            $stored = Crypt::encryptString((string) $value);
+        } elseif ($value !== null) {
+            $stored = (string) $value;
+        }
+
         Setting::updateOrCreate(
             ['key' => $key],
-            ['value' => $value !== null ? (string) $value : null],
+            ['value' => $stored],
         );
 
         $this->flush();

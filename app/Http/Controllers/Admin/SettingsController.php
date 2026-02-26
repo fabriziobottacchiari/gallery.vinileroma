@@ -45,7 +45,7 @@ class SettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $request->validate([
-            'logo'         => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:4096'],
+            'logo'         => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
             'custom_css'   => ['nullable', 'string', 'max:65535'],
             'storage_disk' => ['nullable', 'in:local,public,s3,digitalocean'],
             's3_key'       => ['nullable', 'string', 'max:255'],

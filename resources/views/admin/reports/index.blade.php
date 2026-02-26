@@ -31,7 +31,8 @@ $reasons = [
                     <th class="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Motivo</th>
                     <th class="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden md:table-cell">Commento</th>
                     <th class="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden lg:table-cell">Data</th>
-                    <th class="px-5 py-3 w-16"></th>
+                    <th class="text-left px-5 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wider">Stato</th>
+                    <th class="px-5 py-3"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -90,20 +91,75 @@ $reasons = [
                             {{ $report->created_at->format('d/m/Y H:i') }}
                         </td>
 
+                        {{-- Status --}}
+                        <td class="px-5 py-3">
+                            @if($report->status === 'resolved')
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                    Risolta
+                                </span>
+                            @elseif($report->status === 'ignored')
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 px-2.5 py-1 rounded-full">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                    Ignorata
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    Pendente
+                                </span>
+                            @endif
+                        </td>
+
                         {{-- Actions --}}
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3">
                             <form id="{{ $formId }}"
                                   method="POST"
                                   action="{{ route('admin.reports.destroy', $report) }}">
                                 @csrf @method('DELETE')
                             </form>
-                            <button type="button"
-                                    @click="confirmDelete('{{ $formId }}', 'Eliminare questa segnalazione?')"
-                                    class="inline-flex items-center text-xs text-gray-400 hover:text-red-600 border border-transparent hover:border-red-200 px-2.5 py-1.5 rounded-lg transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
-                            </button>
+
+                            <div class="flex items-center gap-1 justify-end">
+                                {{-- Nascondi foto (only for pending reports with a linked photo) --}}
+                                @if($report->status === 'pending' && $upload && ! $upload->is_hidden)
+                                    <form method="POST" action="{{ route('admin.reports.hide', $report) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-amber-700 border border-transparent hover:border-amber-200 hover:bg-amber-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                                                title="Nascondi foto">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                                            </svg>
+                                            Nascondi
+                                        </button>
+                                    </form>
+                                @endif
+
+                                {{-- Ignora (only for pending reports) --}}
+                                @if($report->status === 'pending')
+                                    <form method="POST" action="{{ route('admin.reports.ignore', $report) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 border border-transparent hover:border-gray-200 hover:bg-gray-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                                                title="Ignora segnalazione">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Ignora
+                                        </button>
+                                    </form>
+                                @endif
+
+                                {{-- Delete --}}
+                                <button type="button"
+                                        @click="confirmDelete('{{ $formId }}', 'Eliminare questa segnalazione?')"
+                                        class="inline-flex items-center text-xs text-gray-400 hover:text-red-600 border border-transparent hover:border-red-200 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                                        title="Elimina">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @endforeach

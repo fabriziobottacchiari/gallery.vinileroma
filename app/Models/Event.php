@@ -26,6 +26,7 @@ class Event extends Model implements HasMedia
         'is_private',
         'has_watermark',
         'status',
+        'cover_media_id',
     ];
 
     protected function casts(): array
@@ -39,7 +40,21 @@ class Event extends Model implements HasMedia
 
     public function getRouteKeyName(): string
     {
-        return 'slug';
+        return 'id';
+    }
+
+    /**
+     * Route parameters for the public-facing URL:  /evento/{year}/{month}/{slug}
+     *
+     * @return array{year: string, month: string, slug: string}
+     */
+    public function publicRouteParams(): array
+    {
+        return [
+            'year'  => $this->event_date->format('Y'),
+            'month' => $this->event_date->format('m'),
+            'slug'  => $this->slug,
+        ];
     }
 
     public function photoUploads(): HasMany

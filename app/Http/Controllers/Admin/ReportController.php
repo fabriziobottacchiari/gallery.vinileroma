@@ -20,6 +20,32 @@ class ReportController extends Controller
         return view('admin.reports.index', compact('reports'));
     }
 
+    /**
+     * Hide the reported photo from the public gallery and mark report as resolved.
+     */
+    public function hidePhoto(PhotoReport $report): RedirectResponse
+    {
+        $report->load('photoUpload');
+
+        if ($report->photoUpload) {
+            $report->photoUpload->update(['is_hidden' => true]);
+        }
+
+        $report->update(['status' => 'resolved']);
+
+        return back()->with('success', 'Foto nascosta dalla galleria pubblica.');
+    }
+
+    /**
+     * Archive an unfounded report without touching the photo.
+     */
+    public function ignore(PhotoReport $report): RedirectResponse
+    {
+        $report->update(['status' => 'ignored']);
+
+        return back()->with('success', 'Segnalazione archiviata.');
+    }
+
     public function destroy(PhotoReport $report): RedirectResponse
     {
         $report->delete();

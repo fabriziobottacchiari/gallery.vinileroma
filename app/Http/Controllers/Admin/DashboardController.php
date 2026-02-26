@@ -14,20 +14,28 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $totalEvents  = Event::count();
-        $totalPhotos  = PhotoUpload::where('status', 'completed')->count();
-        $totalReports = PhotoReport::count();
+        $totalEvents        = Event::count();
+        $totalPhotos        = PhotoUpload::where('status', 'completed')->count();
+        $totalPendingReports = PhotoReport::where('status', 'pending')->count();
+        $totalDownloads     = PhotoUpload::sum('downloads_count');
 
         $recentEvents = Event::with('media')
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
 
+        $topEvents = Event::where('views_count', '>', 0)
+            ->orderByDesc('views_count')
+            ->limit(5)
+            ->get();
+
         return view('admin.dashboard', compact(
             'totalEvents',
             'totalPhotos',
-            'totalReports',
+            'totalPendingReports',
+            'totalDownloads',
             'recentEvents',
+            'topEvents',
         ));
     }
 }

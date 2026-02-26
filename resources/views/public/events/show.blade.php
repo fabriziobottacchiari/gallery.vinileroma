@@ -6,10 +6,19 @@
     @if($event->is_private)
         <meta name="robots" content="noindex, nofollow">
     @endif
+    <meta property="og:type"        content="article">
+    <meta property="og:title"       content="{{ $event->title }} — {{ config('app.name') }}">
+    <meta property="og:description" content="{{ $event->description ?: 'Galleria fotografica del ' . $event->event_date->format('d/m/Y') }}">
+    <meta property="og:url"         content="{{ url()->current() }}">
+    @if($ogImageUrl)
+        <meta property="og:image"      content="{{ $ogImageUrl }}">
+        <meta name="twitter:image"     content="{{ $ogImageUrl }}">
+    @endif
 @endpush
 
 @section('content')
 <div x-data="gallery({{ Js::from($photos) }})"
+     x-init="init()"
      @keydown.escape.window="closeLightbox()"
      @keydown.arrow-left.window="if(lightbox.open) prev()"
      @keydown.arrow-right.window="if(lightbox.open) next()">
@@ -111,6 +120,18 @@
                 </svg>
                 <span x-text="lightbox.shareSuccess ? 'Link copiato!' : 'Condividi'"></span>
             </button>
+
+            {{-- Download (only when a downloadUrl exists) --}}
+            <template x-if="current && current.downloadUrl">
+                <a :href="current.downloadUrl"
+                   class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+                   download>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Scarica
+                </a>
+            </template>
 
             {{-- Report (only when a reportUrl exists) --}}
             <template x-if="current && current.reportUrl">
@@ -216,6 +237,18 @@ function gallery(photos) {
             return this.photos[this.lightbox.index] ?? null;
         },
 
+        init() {
+            // Auto-open lightbox when ?foto={id} is present in the URL
+            const params = new URLSearchParams(window.location.search);
+            const fotoId = parseInt(params.get('foto') || '0', 10);
+            if (fotoId) {
+                const idx = this.photos.findIndex(p => p.id === fotoId);
+                if (idx !== -1) {
+                    this.$nextTick(() => this.openPhoto(idx));
+                }
+            }
+        },
+
         openPhoto(i) {
             this.lightbox.index     = i;
             this.lightbox.open      = true;
@@ -257,7 +290,10 @@ function gallery(photos) {
 
         // ── Share ──────────────────────────────────────────────────────────
         async share() {
-            const pageUrl = window.location.href;
+            // Build a photo-specific URL so social previews show this photo's OG image
+            const url = new URL(window.location.href);
+            url.searchParams.set('foto', this.current.id);
+            const pageUrl = url.toString();
 
             if (navigator.share) {
                 try {

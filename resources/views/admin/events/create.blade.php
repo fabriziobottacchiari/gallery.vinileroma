@@ -16,6 +16,7 @@
      x-data="{
         title: '{{ old('title', '') }}',
         slug: '{{ old('slug', '') }}',
+        eventDate: '{{ old('event_date', '') }}',
         slugLocked: {{ old('slug') ? 'true' : 'false' }},
         generateSlug(val) {
             return val.toLowerCase()
@@ -24,6 +25,14 @@
                 .trim()
                 .replace(/\s+/g, '-')
                 .replace(/-+/g, '-');
+        },
+        get urlPreview() {
+            if (!this.slug || !this.eventDate) return null;
+            const d = new Date(this.eventDate);
+            if (isNaN(d)) return null;
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            return '/evento/' + y + '/' + m + '/' + this.slug;
         }
      }">
 
@@ -66,12 +75,16 @@
                     </button>
                 </div>
                 @error('slug') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <p x-show="urlPreview" x-cloak class="mt-1.5 text-xs text-gray-400 font-mono">
+                    URL: <span class="text-indigo-500" x-text="urlPreview"></span>
+                </p>
             </div>
 
             {{-- Event date --}}
             <div>
                 <label for="event_date" class="block text-sm font-medium text-gray-700 mb-1">Data evento <span class="text-red-500">*</span></label>
                 <input id="event_date" name="event_date" type="date"
+                       x-model="eventDate"
                        value="{{ old('event_date') }}"
                        class="border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm
                               {{ $errors->has('event_date') ? 'border-red-400' : '' }}">

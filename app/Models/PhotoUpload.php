@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class PhotoUpload extends Model
 {
@@ -17,7 +18,27 @@ class PhotoUpload extends Model
         'status',
         'error_message',
         'media_id',
+        'is_hidden',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_hidden' => 'boolean',
+        ];
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Clean up leftover temp files when the record is deleted
+        static::deleting(function (PhotoUpload $upload): void {
+            if ($upload->temp_path) {
+                Storage::disk('local')->delete($upload->temp_path);
+            }
+        });
+    }
 
     public function event(): BelongsTo
     {

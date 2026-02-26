@@ -183,11 +183,10 @@ function adminApp() {
         deleteModal: { visible: false, message: '', formId: null },
 
         init() {
-            const f = @json([
-                'success' => session('success'),
-                'warning' => session('warning'),
-                'error'   => session('error'),
-            ]);
+            @php
+                $__flash = ['success' => session('success'), 'warning' => session('warning'), 'error' => session('error')];
+            @endphp
+            const f = @json($__flash);
             if (f.success) this.addToast('success', f.success);
             if (f.warning) this.addToast('warning', f.warning);
             if (f.error)   this.addToast('error',   f.error);

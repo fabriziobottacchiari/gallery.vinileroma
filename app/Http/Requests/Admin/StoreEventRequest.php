@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +20,10 @@ class StoreEventRequest extends FormRequest
     {
         return [
             'title'         => ['required', 'string', 'max:255'],
-            'slug'          => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('events', 'slug')],
+            'slug'          => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('events', 'slug')->where(function ($query) {
+                $date = Carbon::parse($this->input('event_date'));
+                return $query->whereYear('event_date', $date->year)->whereMonth('event_date', $date->month);
+            })],
             'description'   => ['nullable', 'string'],
             'event_date'    => ['required', 'date'],
             'is_private'    => ['boolean'],

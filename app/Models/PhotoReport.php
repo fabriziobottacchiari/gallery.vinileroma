@@ -15,6 +15,7 @@ class PhotoReport extends Model
         'reason',
         'comment',
         'reporter_ip',
+        'status',
     ];
 
     public function photoUpload(): BelongsTo

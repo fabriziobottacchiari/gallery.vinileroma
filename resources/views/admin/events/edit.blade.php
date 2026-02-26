@@ -12,7 +12,7 @@
             Gestisci foto
         </a>
         @if($event->status === 'published')
-        <a href="{{ route('events.show', $event) }}" target="_blank"
+        <a href="{{ route('public.events.show', $event->publicRouteParams()) }}" target="_blank"
            class="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-indigo-700 border border-gray-300 hover:border-indigo-300 px-3 py-1.5 rounded-lg transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -34,6 +34,7 @@
      x-data="{
         title: '{{ old('title', addslashes($event->title)) }}',
         slug: '{{ old('slug', $event->slug) }}',
+        eventDate: '{{ old('event_date', $event->event_date->format('Y-m-d')) }}',
         slugLocked: true,
         generateSlug(val) {
             return val.toLowerCase()
@@ -42,6 +43,14 @@
                 .trim()
                 .replace(/\s+/g, '-')
                 .replace(/-+/g, '-');
+        },
+        get urlPreview() {
+            if (!this.slug || !this.eventDate) return null;
+            const d = new Date(this.eventDate);
+            if (isNaN(d)) return null;
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            return '/evento/' + y + '/' + m + '/' + this.slug;
         }
      }">
 
@@ -83,12 +92,16 @@
                     </button>
                 </div>
                 @error('slug') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <p class="mt-1.5 text-xs text-gray-400 font-mono">
+                    URL: <span class="text-indigo-500" x-text="urlPreview"></span>
+                </p>
             </div>
 
             {{-- Event date --}}
             <div>
                 <label for="event_date" class="block text-sm font-medium text-gray-700 mb-1">Data evento <span class="text-red-500">*</span></label>
                 <input id="event_date" name="event_date" type="date"
+                       x-model="eventDate"
                        value="{{ old('event_date', $event->event_date->format('Y-m-d')) }}"
                        class="border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm
                               {{ $errors->has('event_date') ? 'border-red-400' : '' }}">

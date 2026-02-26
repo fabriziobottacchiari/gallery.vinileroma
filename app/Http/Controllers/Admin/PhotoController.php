@@ -14,20 +14,44 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class PhotoController extends Controller
 {
     /**
-     * Show the photo management page for an event.
+     * Show the photo management page, passing existing gallery photos to Alpine.
      */
     public function show(Event $event): View
     {
-        return view('admin.events.photos', compact('event'));
+        $uploads = $event->photoUploads()
+            ->where('status', 'completed')
+            ->whereNotNull('media_id')
+            ->get()
+            ->keyBy('media_id');
+
+        $galleryPhotos = $event->getMedia('gallery')
+            ->map(function (Media $media) use ($event, $uploads): array {
+                $upload = $uploads->get($media->id);
+
+                return [
+                    'mediaId'    => $media->id,
+                    'uploadId'   => $upload?->id,
+                    'thumb'      => $media->getUrl('thumb'),
+                    'isCover'    => $media->id === $event->cover_media_id,
+                    'isHidden'   => (bool) $upload?->is_hidden,
+                    'coverUrl'   => $upload
+                        ? route('admin.events.photos.cover', [$event, $upload])
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return view('admin.events.photos', compact('event', 'galleryPhotos'));
     }
 
     /**
-     * FilePond process endpoint — receives one file per request.
-     * Returns the upload ID as plain text (FilePond server ID).
+     * FilePond process endpoint.
      */
     public function upload(Request $request, Event $event): Response
     {
@@ -50,14 +74,12 @@ class PhotoController extends Controller
 
         ProcessEventPhoto::dispatch($upload->id);
 
-        // FilePond expects the server ID as plain text response
         return response((string) $upload->id, 200)
             ->header('Content-Type', 'text/plain');
     }
 
     /**
-     * FilePond revert endpoint — deletes a pending upload.
-     * FilePond sends the server ID (upload ID) as plain text request body.
+     * FilePond revert endpoint.
      */
     public function revert(Request $request, Event $event): Response
     {
@@ -69,10 +91,7 @@ class PhotoController extends Controller
             ->first();
 
         if ($upload !== null) {
-            if ($upload->temp_path) {
-                Storage::disk('local')->delete($upload->temp_path);
-            }
-            $upload->delete();
+            $upload->delete(); // boot() hook cleans temp file
         }
 
         return response('', 200);
@@ -106,15 +125,88 @@ class PhotoController extends Controller
     }
 
     /**
-     * Delete an already-processed photo from the gallery.
+     * Save the new display order for gallery photos.
+     * Accepts { media_ids: [id1, id2, ...] } sorted as desired.
+     */
+    public function reorder(Request $request, Event $event): JsonResponse
+    {
+        $request->validate([
+            'media_ids'   => ['required', 'array'],
+            'media_ids.*' => ['integer'],
+        ]);
+
+        // Only reorder media that actually belongs to this event's gallery
+        $validIds   = $event->getMedia('gallery')->pluck('id')->all();
+        $orderedIds = array_values(array_intersect($request->media_ids, $validIds));
+
+        if (count($orderedIds) > 0) {
+            Media::setNewOrder($orderedIds);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Set a photo as the event cover (used on the public homepage card).
+     */
+    public function setCover(Event $event, PhotoUpload $photoUpload): JsonResponse
+    {
+        abort_if($photoUpload->event_id !== $event->id, 404);
+        abort_if(! $photoUpload->media_id, 404);
+
+        $event->update(['cover_media_id' => $photoUpload->media_id]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Bulk delete multiple gallery photos by their media IDs.
+     * Accepts { media_ids: [id1, id2, ...] }.
+     */
+    public function bulkDestroy(Request $request, Event $event): JsonResponse
+    {
+        $request->validate([
+            'media_ids'   => ['required', 'array', 'min:1'],
+            'media_ids.*' => ['integer'],
+        ]);
+
+        $mediaIds = $request->input('media_ids');
+
+        // Delete Spatie media (files + conversions)
+        Media::whereIn('id', $mediaIds)
+            ->where('model_type', Event::class)
+            ->where('model_id', $event->id)
+            ->get()
+            ->each->delete();
+
+        // Delete photo upload records (boot() hook cleans leftover temp files)
+        $event->photoUploads()
+            ->whereIn('media_id', $mediaIds)
+            ->each(fn (PhotoUpload $u) => $u->delete());
+
+        // Clear cover if it was one of the deleted photos
+        if ($event->cover_media_id && in_array($event->cover_media_id, $mediaIds, true)) {
+            $event->update(['cover_media_id' => null]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Delete a single already-processed photo.
      */
     public function destroy(Event $event, PhotoUpload $photoUpload): JsonResponse
     {
         abort_if($photoUpload->event_id !== $event->id, 404);
 
         if ($photoUpload->media_id) {
-            $media = $event->getMedia('gallery')->firstWhere('id', $photoUpload->media_id);
-            $media?->delete();
+            $event->getMedia('gallery')
+                ->firstWhere('id', $photoUpload->media_id)
+                ?->delete();
+
+            if ($event->cover_media_id === $photoUpload->media_id) {
+                $event->update(['cover_media_id' => null]);
+            }
         }
 
         $photoUpload->delete();
