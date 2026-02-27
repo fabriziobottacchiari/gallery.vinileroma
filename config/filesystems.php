@@ -69,6 +69,7 @@ return [
             'endpoint' => env('DO_SPACES_ENDPOINT'),
             'url' => env('DO_SPACES_URL'),
             'use_path_style_endpoint' => false,
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],
