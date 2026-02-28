@@ -34,9 +34,9 @@ Route::get('/', [PublicEventController::class, 'index'])->name('public.events.in
 |--------------------------------------------------------------------------
 */
 
-Route::get('/login',    [GalleryLoginController::class,    'show'])->name('gallery.login');
-Route::post('/login',   [GalleryLoginController::class,    'store'])->middleware('throttle:5,1');
-Route::post('/logout',  [GalleryLoginController::class,    'destroy'])->name('gallery.logout')->middleware('auth:gallery');
+Route::get('/accedi',    [GalleryLoginController::class,    'show'])->name('gallery.login');
+Route::post('/accedi',   [GalleryLoginController::class,    'store'])->middleware('throttle:5,1');
+Route::post('/esci',     [GalleryLoginController::class,    'destroy'])->name('gallery.logout')->middleware('auth:gallery');
 
 Route::get('/registrati',  [GalleryRegisterController::class, 'show'])->name('gallery.register');
 Route::post('/registrati', [GalleryRegisterController::class, 'store'])->middleware('throttle:3,5');
