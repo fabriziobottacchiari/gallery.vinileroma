@@ -16,27 +16,52 @@ class EventController extends Controller
 {
     public function index(Request $request): View
     {
-        $q    = trim((string) $request->query('q', ''));
-        $year = (string) $request->query('year', '');
+        $q     = trim((string) $request->query('q', ''));
+        $year  = (string) $request->query('year', '');
+        $month = (string) $request->query('month', '');
+        $day   = (string) $request->query('day', '');
 
         $query = Event::published()->public()->with('media')->orderByDesc('event_date');
 
         if ($q !== '') {
             $query->where('title', 'like', '%' . $q . '%');
         }
-
         if ($year !== '' && ctype_digit($year)) {
             $query->whereYear('event_date', $year);
+        }
+        if ($month !== '' && ctype_digit($month)) {
+            $query->whereMonth('event_date', $month);
+        }
+        if ($day !== '' && ctype_digit($day)) {
+            $query->whereDay('event_date', $day);
         }
 
         $events = $query->paginate(24)->withQueryString();
 
-        // Available years for the filter dropdown
-        $availableYears = Event::published()->public()
+        // Available filter options (scoped to already-applied filters for cascading UX)
+        $base = Event::published()->public();
+
+        $availableYears = (clone $base)
             ->selectRaw('YEAR(event_date) as y')
-            ->distinct()
-            ->orderByDesc('y')
-            ->pluck('y');
+            ->distinct()->orderByDesc('y')->pluck('y');
+
+        $availableMonths = (clone $base)
+            ->when($year !== '' && ctype_digit($year), fn ($q) => $q->whereYear('event_date', $year))
+            ->selectRaw('MONTH(event_date) as m')
+            ->distinct()->orderBy('m')->pluck('m');
+
+        $availableDays = (clone $base)
+            ->when($year !== '' && ctype_digit($year), fn ($q) => $q->whereYear('event_date', $year))
+            ->when($month !== '' && ctype_digit($month), fn ($q) => $q->whereMonth('event_date', $month))
+            ->selectRaw('DAY(event_date) as d')
+            ->distinct()->orderBy('d')->pluck('d');
+
+        $monthNames = [
+            1 => 'Gennaio', 2 => 'Febbraio', 3 => 'Marzo',
+            4 => 'Aprile',  5 => 'Maggio',   6 => 'Giugno',
+            7 => 'Luglio',  8 => 'Agosto',   9 => 'Settembre',
+            10 => 'Ottobre', 11 => 'Novembre', 12 => 'Dicembre',
+        ];
 
         // Preload cover URLs keyed by event ID
         $coverUrls = [];
@@ -55,7 +80,11 @@ class EventController extends Controller
             }
         }
 
-        return view('public.events.index', compact('events', 'coverUrls', 'q', 'year', 'availableYears'));
+        return view('public.events.index', compact(
+            'events', 'coverUrls',
+            'q', 'year', 'month', 'day',
+            'availableYears', 'availableMonths', 'availableDays', 'monthNames'
+        ));
     }
 
     public function show(Request $request, string $year, string $month, string $day, string $slug): View
