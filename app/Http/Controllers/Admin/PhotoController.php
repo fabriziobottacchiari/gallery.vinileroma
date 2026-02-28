@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use ZipArchive;
 
 class PhotoController extends Controller
 {
@@ -47,7 +48,12 @@ class PhotoController extends Controller
             ->values()
             ->all();
 
-        return view('admin.events.photos', compact('event', 'galleryPhotos'));
+        $hasOriginals = $event->photoUploads()
+            ->where('status', 'completed')
+            ->whereNotNull('original_path')
+            ->exists();
+
+        return view('admin.events.photos', compact('event', 'galleryPhotos', 'hasOriginals'));
     }
 
     /**
@@ -190,6 +196,55 @@ class PhotoController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Download all original photos for an event as a ZIP archive.
+     */
+    public function downloadZip(Event $event): mixed
+    {
+        $uploads = $event->photoUploads()
+            ->where('status', 'completed')
+            ->whereNotNull('original_path')
+            ->get(['id', 'original_filename', 'original_path']);
+
+        abort_if($uploads->isEmpty(), 404, 'Nessun originale disponibile per questo evento.');
+
+        $zipPath  = tempnam(sys_get_temp_dir(), 'gallery_zip_') . '.zip';
+        $zip      = new ZipArchive();
+        $opened   = $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        abort_if($opened !== true, 500, 'Impossibile creare l\'archivio ZIP.');
+
+        $usedNames = [];
+
+        foreach ($uploads as $upload) {
+            $filePath = Storage::disk('local')->path($upload->original_path);
+
+            if (! file_exists($filePath)) {
+                continue;
+            }
+
+            // Ensure unique filenames inside the ZIP
+            $name = $upload->original_filename;
+            if (isset($usedNames[$name])) {
+                $usedNames[$name]++;
+                $info = pathinfo($name);
+                $name = ($info['filename'] ?? $name) . '_' . $usedNames[$name] . '.' . ($info['extension'] ?? '');
+            } else {
+                $usedNames[$name] = 1;
+            }
+
+            $zip->addFile($filePath, $name);
+        }
+
+        $zip->close();
+
+        $downloadName = Str::slug($event->title) . '-originali.zip';
+
+        return response()
+            ->download($zipPath, $downloadName, ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend(true);
     }
 
     /**

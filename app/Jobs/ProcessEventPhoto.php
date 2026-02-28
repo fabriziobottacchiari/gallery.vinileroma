@@ -65,6 +65,18 @@ class ProcessEventPhoto implements ShouldQueue
             throw new \RuntimeException("File temporaneo non trovato per: {$upload->original_filename}");
         }
 
+        // ── Preserve original file ───────────────────────────────────────────
+        $ext          = strtolower(pathinfo($upload->original_filename, PATHINFO_EXTENSION)) ?: 'jpg';
+        $origPrefix   = Str::random(8);
+        $origBaseName = Str::slug(pathinfo($upload->original_filename, PATHINFO_FILENAME));
+        $originalDir  = 'originals/' . $event->id;
+        $originalPath = $originalDir . '/' . $origPrefix . '_' . $origBaseName . '.' . $ext;
+
+        Storage::disk('local')->makeDirectory($originalDir);
+        Storage::disk('local')->put($originalPath, file_get_contents($tempPath));
+
+        $upload->update(['original_path' => $originalPath]);
+
         $manager = new ImageManager(new GdDriver());
         $image   = $manager->read($tempPath);
 
@@ -115,6 +127,11 @@ class ProcessEventPhoto implements ShouldQueue
             ->toMediaCollection('gallery', $disk);
 
         gc_collect_cycles();
+
+        // ── Auto-cover: set if none is defined yet ───────────────────────────
+        if ($event->cover_media_id === null) {
+            $event->update(['cover_media_id' => $media->id]);
+        }
 
         // ── Clean up original temp file ──────────────────────────────────────
         if ($upload->temp_path && Storage::disk('local')->exists($upload->temp_path)) {

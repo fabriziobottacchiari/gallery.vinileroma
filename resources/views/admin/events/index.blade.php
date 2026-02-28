@@ -13,9 +13,77 @@
 @endsection
 
 @section('content')
+<div class="space-y-4">
+
+{{-- Filter bar --}}
+<form method="GET" action="{{ route('admin.events.index') }}"
+      class="flex flex-wrap items-end gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3">
+
+    {{-- Title/slug search --}}
+    <div class="flex-1 min-w-48">
+        <label class="block text-xs font-medium text-gray-500 mb-1">Cerca</label>
+        <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" name="q" value="{{ $q }}" placeholder="Titolo o slug…"
+                   class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+    </div>
+
+    {{-- Status --}}
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Stato</label>
+        <select name="status" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+            <option value=""       {{ $status === ''          ? 'selected' : '' }}>Tutti</option>
+            <option value="published" {{ $status === 'published' ? 'selected' : '' }}>Pubblicati</option>
+            <option value="draft"  {{ $status === 'draft'     ? 'selected' : '' }}>Bozze</option>
+        </select>
+    </div>
+
+    {{-- Date from --}}
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Dal</label>
+        <input type="date" name="from" value="{{ $from }}"
+               class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+    </div>
+
+    {{-- Date to --}}
+    <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Al</label>
+        <input type="date" name="to" value="{{ $to }}"
+               class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+    </div>
+
+    <div class="flex items-end gap-2">
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3.5 py-1.5 rounded-lg transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Filtra
+        </button>
+        @if($q || $status || $from || $to)
+        <a href="{{ route('admin.events.index') }}"
+           class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg transition-colors">
+            Reimposta
+        </a>
+        @endif
+    </div>
+</form>
+
 <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
 
     @if($events->isEmpty())
+        @if($q || $status || $from || $to)
+        <div class="text-center py-16 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <p class="text-sm font-medium">Nessun evento corrisponde ai filtri.</p>
+            <a href="{{ route('admin.events.index') }}" class="mt-2 inline-block text-sm text-indigo-600 hover:underline">Reimposta ricerca</a>
+        </div>
+        @else
         <div class="text-center py-16 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -23,6 +91,7 @@
             <p class="text-sm font-medium">Nessun evento ancora.</p>
             <a href="{{ route('admin.events.create') }}" class="mt-2 inline-block text-sm text-indigo-600 hover:underline">Crea il primo evento</a>
         </div>
+        @endif
     @else
         <table class="w-full text-sm">
             <thead>
@@ -150,5 +219,7 @@
             </div>
         @endif
     @endif
-</div>
+</div>{{-- /bg-white card --}}
+
+</div>{{-- /space-y-4 --}}
 @endsection

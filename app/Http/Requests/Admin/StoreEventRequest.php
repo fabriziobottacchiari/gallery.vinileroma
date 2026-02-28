@@ -22,7 +22,7 @@ class StoreEventRequest extends FormRequest
             'title'         => ['required', 'string', 'max:255'],
             'slug'          => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('events', 'slug')->where(function ($query) {
                 $date = Carbon::parse($this->input('event_date'));
-                return $query->whereYear('event_date', $date->year)->whereMonth('event_date', $date->month);
+                return $query->whereYear('event_date', $date->year)->whereMonth('event_date', $date->month)->whereDay('event_date', $date->day);
             })],
             'description'   => ['nullable', 'string'],
             'event_date'    => ['required', 'date'],

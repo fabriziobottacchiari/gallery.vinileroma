@@ -15,6 +15,7 @@ class PhotoUpload extends Model
         'batch_uuid',
         'original_filename',
         'temp_path',
+        'original_path',
         'status',
         'error_message',
         'media_id',
@@ -32,10 +33,13 @@ class PhotoUpload extends Model
     {
         parent::boot();
 
-        // Clean up leftover temp files when the record is deleted
+        // Clean up leftover temp and original files when the record is deleted
         static::deleting(function (PhotoUpload $upload): void {
             if ($upload->temp_path) {
                 Storage::disk('local')->delete($upload->temp_path);
+            }
+            if ($upload->original_path) {
+                Storage::disk('local')->delete($upload->original_path);
             }
         });
     }

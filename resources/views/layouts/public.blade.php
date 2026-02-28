@@ -29,7 +29,7 @@
 <body class="font-sans antialiased bg-zinc-950 text-white min-h-screen">
 
 <header class="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/60">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         @php $logo = \App\Models\BrandingSettings::instance()->getFirstMedia('logo'); @endphp
         @if($logo)
             <a href="{{ route('public.events.index') }}">
@@ -41,12 +41,52 @@
                 {{ config('app.name') }}
             </a>
         @endif
+
+        {{-- Gallery user auth nav --}}
+        <nav class="flex items-center gap-3 text-sm">
+            @auth('gallery')
+                <a href="{{ route('public.favorites.index') }}"
+                   class="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors"
+                   title="Le mie foto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span class="hidden sm:inline text-sm">Le mie foto</span>
+                </a>
+                <span class="hidden sm:block text-zinc-400 text-sm">
+                    {{ auth('gallery')->user()->first_name }}
+                </span>
+                <form method="POST" action="{{ route('gallery.logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="text-zinc-400 hover:text-white transition-colors text-sm">
+                        Esci
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('gallery.login') }}"
+                   class="text-zinc-400 hover:text-white transition-colors">
+                    Accedi
+                </a>
+                <a href="{{ route('gallery.register') }}"
+                   class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg font-medium transition-colors text-xs">
+                    Registrati
+                </a>
+            @endauth
+        </nav>
     </div>
 </header>
 
 <main>
     @yield('content')
 </main>
+
+<footer class="border-t border-zinc-800/60 mt-auto py-6">
+    <p class="text-center text-xs text-zinc-600">
+        Developed by <a href="https://www.maioralabs.it/" target="_blank" rel="noopener noreferrer"
+                        class="text-zinc-500 hover:text-zinc-300 transition-colors">Maiora Labs</a>
+    </p>
+</footer>
 
 @yield('scripts')
 

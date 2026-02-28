@@ -112,6 +112,20 @@
         {{-- Bottom action bar --}}
         <div class="flex-shrink-0 px-4 py-4 flex items-center justify-center gap-3">
 
+            {{-- Favourite --}}
+            <template x-if="current && current.favoriteUrl">
+                <button @click="toggleFavorite()"
+                        :disabled="lightbox.favoriteSubmitting"
+                        class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm font-medium transition-colors disabled:opacity-50"
+                        :class="lightbox.favorites[current.id] ? 'text-red-500' : 'text-zinc-300 hover:text-white'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                         :fill="lightbox.favorites[current.id] ? 'currentColor' : 'none'">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span x-text="lightbox.favorites[current.id] ? 'Salvata' : 'Salva'"></span>
+                </button>
+            </template>
+
             {{-- Share --}}
             <button @click="share()"
                     class="relative flex items-center gap-2 px-4 py-2.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-white transition-colors">
@@ -220,17 +234,19 @@ function gallery(photos) {
     return {
         photos,
         lightbox: {
-            open:             false,
-            index:            0,
-            reporting:        false,
-            reportSent:       false,
-            reportSubmitting: false,
-            reportReason:     'inappropriate',
-            reportComment:    '',
-            reportError:      '',
-            shareSuccess:     false,
-            touchStartX:      0,
-            touchStartY:      0,
+            open:               false,
+            index:              0,
+            favorites:          {},
+            favoriteSubmitting: false,
+            reporting:          false,
+            reportSent:         false,
+            reportSubmitting:   false,
+            reportReason:       'inappropriate',
+            reportComment:      '',
+            reportError:        '',
+            shareSuccess:       false,
+            touchStartX:        0,
+            touchStartY:        0,
         },
 
         get current() {
@@ -238,6 +254,11 @@ function gallery(photos) {
         },
 
         init() {
+            // Initialise favourites map from server-rendered state
+            this.photos.forEach(p => {
+                this.lightbox.favorites[p.id] = p.favorited ?? false;
+            });
+
             // Auto-open lightbox when ?foto={id} is present in the URL
             const params = new URLSearchParams(window.location.search);
             const fotoId = parseInt(params.get('foto') || '0', 10);
@@ -319,6 +340,36 @@ function gallery(photos) {
                 setTimeout(() => { this.lightbox.shareSuccess = false; }, 2500);
             } catch (_) {
                 // clipboard API not available — silent fail
+            }
+        },
+
+        // ── Favourite ──────────────────────────────────────────────────────
+        async toggleFavorite() {
+            const photo = this.current;
+            if (!photo || !photo.favoriteUrl || this.lightbox.favoriteSubmitting) return;
+
+            this.lightbox.favoriteSubmitting = true;
+            const prev = this.lightbox.favorites[photo.id];
+            this.lightbox.favorites[photo.id] = !prev; // optimistic
+
+            try {
+                const res = await fetch(photo.favoriteUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept':        'application/json',
+                        'X-CSRF-TOKEN':  document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.lightbox.favorites[photo.id] = data.favorited;
+                } else {
+                    this.lightbox.favorites[photo.id] = prev;
+                }
+            } catch (_) {
+                this.lightbox.favorites[photo.id] = prev;
+            } finally {
+                this.lightbox.favoriteSubmitting = false;
             }
         },
 

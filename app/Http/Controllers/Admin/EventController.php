@@ -9,15 +9,42 @@ use App\Http\Requests\Admin\StoreEventRequest;
 use App\Http\Requests\Admin\UpdateEventRequest;
 use App\Models\Event;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class EventController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $events = Event::with('media')->orderByDesc('event_date')->paginate(20);
+        $q      = trim((string) $request->query('q', ''));
+        $status = $request->query('status', '');
+        $from   = $request->query('from', '');
+        $to     = $request->query('to', '');
 
-        return view('admin.events.index', compact('events'));
+        $query = Event::with('media')->orderByDesc('event_date');
+
+        if ($q !== '') {
+            $query->where(function ($qb) use ($q): void {
+                $qb->where('title', 'like', '%' . $q . '%')
+                   ->orWhere('slug', 'like', '%' . $q . '%');
+            });
+        }
+
+        if ($status === 'published' || $status === 'draft') {
+            $query->where('status', $status);
+        }
+
+        if ($from !== '') {
+            $query->whereDate('event_date', '>=', $from);
+        }
+
+        if ($to !== '') {
+            $query->whereDate('event_date', '<=', $to);
+        }
+
+        $events = $query->paginate(20)->withQueryString();
+
+        return view('admin.events.index', compact('events', 'q', 'status', 'from', 'to'));
     }
 
     public function create(): View

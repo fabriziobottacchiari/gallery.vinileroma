@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\GalleryUserFavorite;
 use App\Models\PhotoUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,12 +14,29 @@ use Illuminate\View\View;
 
 class EventController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $events = Event::published()->public()
-            ->with('media')
-            ->orderByDesc('event_date')
-            ->paginate(24);
+        $q    = trim((string) $request->query('q', ''));
+        $year = (string) $request->query('year', '');
+
+        $query = Event::published()->public()->with('media')->orderByDesc('event_date');
+
+        if ($q !== '') {
+            $query->where('title', 'like', '%' . $q . '%');
+        }
+
+        if ($year !== '' && ctype_digit($year)) {
+            $query->whereYear('event_date', $year);
+        }
+
+        $events = $query->paginate(24)->withQueryString();
+
+        // Available years for the filter dropdown
+        $availableYears = Event::published()->public()
+            ->selectRaw('YEAR(event_date) as y')
+            ->distinct()
+            ->orderByDesc('y')
+            ->pluck('y');
 
         // Preload cover URLs keyed by event ID
         $coverUrls = [];
@@ -37,14 +55,15 @@ class EventController extends Controller
             }
         }
 
-        return view('public.events.index', compact('events', 'coverUrls'));
+        return view('public.events.index', compact('events', 'coverUrls', 'q', 'year', 'availableYears'));
     }
 
-    public function show(Request $request, string $year, string $month, string $slug): View
+    public function show(Request $request, string $year, string $month, string $day, string $slug): View
     {
         $event = Event::where('slug', $slug)
             ->whereYear('event_date', $year)
             ->whereMonth('event_date', $month)
+            ->whereDay('event_date', $day)
             ->firstOrFail();
 
         abort_if($event->status !== 'published', 404);
@@ -64,9 +83,20 @@ class EventController extends Controller
 
         $hiddenMediaIds = $uploads->filter(fn (PhotoUpload $u) => $u->is_hidden)->keys()->all();
 
+        // Determine which media the current user has favourited
+        $galleryUser  = auth('gallery')->user();
+        $favoritedIds = [];
+        if ($galleryUser) {
+            $allMediaIds  = $event->getMedia('gallery')->pluck('id')->all();
+            $favoritedIds = GalleryUserFavorite::where('gallery_user_id', $galleryUser->id)
+                ->whereIn('media_id', $allMediaIds)
+                ->pluck('media_id')
+                ->all();
+        }
+
         $photos = $event->getMedia('gallery')
             ->reject(fn ($media) => in_array($media->id, $hiddenMediaIds, true))
-            ->map(function ($media) use ($event, $uploads) {
+            ->map(function ($media) use ($event, $uploads, $favoritedIds) {
                 $upload = $uploads->get($media->id);
 
                 return [
@@ -74,6 +104,8 @@ class EventController extends Controller
                     'thumb'       => $media->getUrl('thumb'),
                     'preview'     => $media->getUrl('preview'),
                     'filename'    => $media->file_name,
+                    'favoriteUrl' => route('public.favorites.toggle', $media->id),
+                    'favorited'   => in_array($media->id, $favoritedIds, true),
                     'reportUrl'   => $upload
                         ? route('public.photo-report.store', [...$event->publicRouteParams(), 'photoUpload' => $upload->id])
                         : null,
@@ -110,11 +142,12 @@ class EventController extends Controller
     /**
      * Track a photo download and redirect to the full-resolution media URL.
      */
-    public function download(string $year, string $month, string $slug, PhotoUpload $photoUpload): RedirectResponse
+    public function download(string $year, string $month, string $day, string $slug, PhotoUpload $photoUpload): RedirectResponse
     {
         $event = Event::where('slug', $slug)
             ->whereYear('event_date', $year)
             ->whereMonth('event_date', $month)
+            ->whereDay('event_date', $day)
             ->firstOrFail();
 
         abort_if($event->status !== 'published', 404);

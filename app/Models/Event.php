@@ -44,15 +44,16 @@ class Event extends Model implements HasMedia
     }
 
     /**
-     * Route parameters for the public-facing URL:  /evento/{year}/{month}/{slug}
+     * Route parameters for the public-facing URL:  /evento/{year}/{month}/{day}/{slug}
      *
-     * @return array{year: string, month: string, slug: string}
+     * @return array{year: string, month: string, day: string, slug: string}
      */
     public function publicRouteParams(): array
     {
         return [
             'year'  => $this->event_date->format('Y'),
             'month' => $this->event_date->format('m'),
+            'day'   => $this->event_date->format('d'),
             'slug'  => $this->slug,
         ];
     }

@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'mfa.verified' => \App\Http\Middleware\RequireMfaVerified::class,
+            'mfa.verified'     => \App\Http\Middleware\RequireMfaVerified::class,
+            'gallery.auth'     => \App\Http\Middleware\RequireGalleryAuth::class,
         ]);
 
         // Apply security headers to all web responses
